@@ -188,7 +188,8 @@ def trelica():
     """
     SALVA OS DADOS
     """
-    with pd.ExcelWriter('output.xlsx') as writer:
+    filename = 'output_' + str(n) + '.xlsx'
+    with pd.ExcelWriter(filename) as writer:
         data.to_excel(writer, sheet_name="analysis")
 
         # Salva os materiais e seção na database
