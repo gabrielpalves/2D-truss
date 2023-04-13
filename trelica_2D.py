@@ -5,6 +5,8 @@ from matplotlib import cm
 from sklearn import preprocessing
 import pandas as pd
 import random
+import time
+from datetime import timedelta
 
 from self_weight import self_weight
 from FEM import FEM
@@ -21,7 +23,7 @@ def trelica():
     var_mat = False
     var_Fx = False
     var_Fy = False
-    n = 100 # number of times to run
+    n = 100000 # number of times to run
 
     # Montagem da estrutura
     # Nós
@@ -138,6 +140,7 @@ def trelica():
 
     ### Varia as propriedades, forças, etc
     for _ in range(n):
+        start = time.time()
         if var_Fx:
             fx = random.randint(-10**6, 10**6)  # em Newtons
             forcas[0][1] = fx
@@ -177,12 +180,20 @@ def trelica():
         dy = desloc[2*(no_critico)-1]
 
         # Guarda na tabela 'data'
-        # data.loc[len(data)] = np.concatenate((selected_sec, selected_mat, np.array([fx]), np.array([fy]), dx, dy,
-        #                                     sigma_group, abs(sigma_group/(fy_k_group/gama_d))))
-        # data.loc[len(data)] = np.concatenate((area_group, fy_k_group, np.array([fx]), np.array([fy]), dx, dy,
-        #                                     sigma_group, abs(sigma_group/(fy_k_group/gama_d))))
         data.loc[len(data)] = np.concatenate((area_group, E_group, np.array([fx]), np.array([fy]), dx, dy,
                                             sigma_group))
+        
+        end = time.time()
+        porcentagem = (_/n)*100
+        if porcentagem % 20 == 0:
+            duration = end - start
+            total_time = duration * n
+            elapsed_time = duration * _
+            remaining_time = total_time - elapsed_time
+            
+            print(f'Elapsed time (hh:mm:ss) {timedelta(seconds=elapsed_time)} --- '  
+                f'Reamining time (hh:mm:ss) {timedelta(seconds=remaining_time)} --- '
+                f'Total time (hh:mm:ss) {timedelta(seconds=total_time)}')
 
 
     """
