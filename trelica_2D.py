@@ -1,8 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-from matplotlib import cm
-from sklearn import preprocessing
 import pandas as pd
 import random
 import time
@@ -12,18 +8,20 @@ from self_weight import self_weight
 from FEM import FEM
 from set_up_datatable import set_up_datatable
 from utils import group_results, vary_groups
+from plot_truss import plot_truss
+from save_truss_info import save_truss_info
 
-def trelica():
+def trelica(secao_grupo, plotagem=False, salva_excel=False):
 
     """
     SET PARAMETERS
     """
     # Parâmetros
-    var_sec = True
+    var_sec = False
     var_mat = False
     var_Fx = False
     var_Fy = False
-    n = 100000 # number of times to run
+    n = 1 # number of times to run
 
     # Montagem da estrutura
     # Nós
@@ -34,8 +32,8 @@ def trelica():
     scale = 5
 
     # Deslocamento admissível
-    desloc_adm_x = 0.004  # m
-    desloc_adm_y = 0.004  # m
+    desloc_adm_x = 0.005  # m
+    desloc_adm_y = 0.01  # m
     no_critico = 5 # número do nó onde o desloc adm será observado
 
     # Materiais
@@ -103,6 +101,9 @@ def trelica():
         [13, 1],
     ], dtype='int32')
 
+    for idx, s in enumerate(secao_grupo):
+        prop_group[idx][0] = s
+
     # Carregamentos [nó,   intensidade_x,  intensidade_y]
     forcas = np.array([
         [5, 0, -1e5]
@@ -113,7 +114,6 @@ def trelica():
         [1, 1, 1],
         [2, 1, 1],
     ], dtype='int32')
-
 
 
     """
@@ -133,7 +133,6 @@ def trelica():
         
         selected_mat[idx] = prop_group[idx][1]-1
         selected_sec[idx] = prop_group[idx][0]-1
-
 
     # Set up data table
     data = set_up_datatable(group)
@@ -183,6 +182,7 @@ def trelica():
         data.loc[len(data)] = np.concatenate((area_group, E_group, np.array([fx]), np.array([fy]), dx, dy,
                                             sigma_group))
         
+        # Estima o tempo que vai demorar todas as 'n' iterações
         end = time.time()
         porcentagem = (_/n)*100
         if porcentagem % 20 == 0:
@@ -197,171 +197,42 @@ def trelica():
 
 
     """
-    SALVA OS DADOS
+    SALVA OS DADOS EM EXCEL
     """
-    filename = 'output_' + str(n) + '.xlsx'
-    with pd.ExcelWriter(filename) as writer:
-        data.to_excel(writer, sheet_name="analysis")
-
-        # Salva os materiais e seção na database
-        df_sec = pd.DataFrame(secoes, index=list(range(1, secoes.shape[0]+1)), columns = ["A", "b", "t", "Ix", "Iy", "rx", "ry", "rz_min", "wdt", "J", "W", "x", "s4g"])
-        df_sec.to_excel(writer, sheet_name="sections")
-
-        df_mat = pd.DataFrame(material, index=list(range(1, material.shape[0]+1)), columns = ["E", "fy_k", "density"])
-        df_mat.to_excel(writer, sheet_name="materials")
-
-        # Salva os grupos
-        df_gru = pd.DataFrame(group, index=list(range(1, group.shape[0]+1)), columns=np.zeros((group.shape[1])))
-        df_gru.to_excel(writer, sheet_name="groups")
+    if salva_excel:
+        save_truss_info(data, secoes, material, group, conec, x, y, GDL_rest, forcas, no_critico, pp, gravidade, gama_d, n)
         
-        # Salva as coordenadas e conectividades
-        coord = np.array([x,y])
-        df_coo = pd.DataFrame(coord, index=['x', 'y'], columns=list(range(1, x.shape[0]+1)))
-        df_coo.to_excel(writer, sheet_name="coord")
-        
-        df_con = pd.DataFrame(conec[:,-2:], index=list(range(1, conec.shape[0]+1)), columns=['node 1', 'node 2'])
-        df_con.to_excel(writer, sheet_name="elements")
-        
-        # Salva os GDL restringidos
-        df_res = pd.DataFrame(GDL_rest, index=list(range(1, GDL_rest.shape[0]+1)), columns=['node', 'rest x', 'rest y'])
-        df_res.to_excel(writer, sheet_name="GDL_rest")
-        
-        # Salva as forças
-        df_for = pd.DataFrame(forcas, index=list(range(1, forcas.shape[0]+1)), columns=['node', 'Fx', 'Fy'])
-        df_for.to_excel(writer, sheet_name="ext forces")
-        
-        # Salva informações
-        df_inf = pd.DataFrame([pp, gravidade, gama_d, no_critico], index=['self weight coef', 'gravity', 'fy_k reduction', 'observed node'])
-        df_inf.to_excel(writer, sheet_name="info")
-        
-
 
     """
     PLOTA A ÚLTIMA ESTRUTURA ANALISADA
     """
-    fn = F
-    ten = sigma
-    no = np.arange(1, len(x)+1)  # numeração dos nós
-    n_nos = no[-1]  # número de nós
-    n_forcas = forcas.shape[0]
-    print(f'Vetor de esforços: {fn}')
-    print(f'Vetor de tensões:  {ten}')
-    print(f'Esforço axial no elemento 2: {fn[1]} \n')
+    if plotagem:
+        plot_truss(F, sigma, forcas, x, y, conec, desloc, scale, desloc_adm_x, desloc_adm_y, prop_group, material, gama_d)
 
-    print('===========================================')
-    print('NÓ        UX                             UY')
-    print('-------------------------------------------')
-    x_deformed = np.copy(x)
-    y_deformed = np.copy(y)
-    falha = False
-    for i in range(n_nos):
-        x_deformed[i] = x[i] + desloc[2*(i+1)-2]*scale
-        y_deformed[i] = y[i] + desloc[2*(i+1)-1]*scale
-        print(
-            f'Nó {i+1:2.0f} --> Deslocamento x: {float(desloc[2*(i+1)-2]):10.5f} m;  Deslocamento y: {float(desloc[2*(i+1)-1]):10.5f} m')
+    """
+    RETORNA O CUSTO DA ESTRUTURA
+    """
+    cost = 0
+    for el in range(n_el):
+        # Comprimento "L" do elemento "el"
+        no1 = conec[el][-2]-1
+        no2 = conec[el][-1]-1
 
-        desloc_taxa = np.array(
-            [desloc[2*(i+1)-2]/desloc_adm_x, desloc[2*(i+1)-1]/desloc_adm_y])
-        if np.abs(desloc_taxa[0][0]) > 1:
-            falha = True
-            print(
-                f'NÓ {i+1} ULTRAPASSOU O DESLOCAMENTO MÁXIMO ADMISSÍVEL EM {np.abs(desloc_taxa[0][0]-1)*100:4.1f}%')
+        L = np.sqrt((x[no2] - x[no1])**2 + (y[no2] - y[no1])**2)
 
-        if np.abs(desloc_taxa[1][0]) > 1:
-            falha = True
-            print(
-                f'NÓ {i+1} ULTRAPASSOU O DESLOCAMENTO MÁXIMO ADMISSÍVEL EM {np.abs(desloc_taxa[1][0]-1)*100:4.1f}%')
+        # Propriedades
+        s = prop_group[conec[el][1]-1][0]
+        A = secoes[s-1][0]
 
-    print('\n')
+        V = L*A # Volume do elemento
 
-    print('-----------------------------------------------------------')
-    print('ELEMENTO        FORÇA AXIAL                   TENSÃO NORMAL')
-    print('-----------------------------------------------------------')
-    for i in range(n_el):
-        print(
-            f'Elemento {i+1:2.0f} --> Força axial: {float(fn[i]):15.5f}; Tensão normal: {float(ten[i]):10.5f}')
-        m = prop_group[conec[el][1]-1][1]
-        fy_taxa = np.abs(ten[i])/(material[m-1][1]/gama_d)
-        if fy_taxa > 1:
-            falha = True
-            print(
-                f'ELEMENTO {conec[i][0]} FALHOU. ULTRAPASSOU A TENSÃO DE ESCOAMENTO EM {(fy_taxa-1)*100:4.1f}%')
-    print('===========================================================')
-    print('\n')
+        cost = cost + V
 
-    if falha:
-        print('A ESTRUTURA NÃO ESTÁ SEGURA!')
+    taxa_dy = abs(dy/desloc_adm_y)
+    if taxa_dy > 1:
+        cost = cost + taxa_dy*10**8
 
-    # Plots
-    plt.style.use('_mpl-gallery')
-    font = {'family': 'sans-serif',
-            'weight': 'normal',
-            'size': 20}
-
-    plt.rc('font', **font)
-
-    fig, (ax1, ax2) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [16, 1]})
-
-    cmap = mpl.cm.cool
-    norm = mpl.colors.Normalize(vmin=min(fn), vmax=max(fn))
-    cb1 = mpl.colorbar.ColorbarBase(ax2, cmap=cmap,
-                                    norm=norm,
-                                    orientation='vertical')
-
-    xmin = min(x)
-    xmax = max(x)
-
-    ymin = min(y)
-    ymax = max(y)
-
-    # Plota treliça
-    find_nearest = lambda array, value: (np.abs(array - value)).argmin()
-    for i in range(n_el):
-        x_el = np.array(x[conec[i][-2]-1], x[conec[i][-1]-1])
-        y_el = np.array(y[conec[i][-2]-1], y[conec[i][-1]-1])
-
-        x_el_deformed = np.array(
-            [x_deformed[conec[i][-2]-1], x_deformed[conec[i][-1]-1]])
-        y_el_deformed = np.array(
-            [y_deformed[conec[i][-2]-1], y_deformed[conec[i][-1]-1]])
-
-        idx = find_nearest(np.array(cb1._values), fn[i])
-
-        ax1.plot(x_el_deformed, y_el_deformed, linewidth=3, c=cm.cool(idx))
-
-    # Plota forças (representadas por linhas tracejadas pretas)
-    normalized = preprocessing.normalize([forcas[:,1:].flatten()])
-
-    no1 = conec[-1][-2]-1
-    no2 = conec[-1][-1]-1
-    L = np.sqrt((x[no2] - x[no1])**2 + (y[no2] - y[no1])**2)
-
-    for i in range(n_forcas):
-        fx_i = x_deformed[int(forcas[i][0]-1)]
-        fy_i = y_deformed[int(forcas[i][0]-1)]
-
-        fx_size = normalized[0][i*2]*L/7
-        fy_size = normalized[0][i*2+1]*L/7
-
-        ax1.plot(np.array([fx_i, fx_i+fx_size]),
-                 np.array([fy_i, fy_i]),
-                 linewidth=2, c='k', linestyle='--')
-        
-        ax1.plot(np.array([fx_i, fx_i]),
-                 np.array([fy_i, fy_i+fy_size]),
-                 linewidth=2, c='k', linestyle='--')
-
-    # Ajusta algumas configurações dos plots
-    plt.subplots_adjust(bottom=0.1, right=0.9, left=0.1, top=0.9)
-
-    ax1.set_xlabel('x (m)')
-    ax1.set_ylabel('y (m)')
-    ax2.set_xlabel('Esforço axial (N)')
-
-    plt.grid(color='0.5', linestyle=':', linewidth=1)
-    ax1.set_title(f'Treliça na configuração deformada: Escala {scale}')
-
-    plt.show()
+    return cost
 
 if __name__ == "__main__":
-    trelica()
+    print(trelica([1, 2, 3, 4, 5, 6, 7], True, False))
