@@ -224,15 +224,14 @@ def trelica(secao_grupo, plotagem=False, salva_excel=False):
         s = prop_group[conec[el][1]-1][0]
         A = secoes[s-1][0]
 
-        V = L*A # Volume do elemento
+        V = L*A*10**9 # Volume do elemento (mm**3)
 
         cost = cost + V
 
     taxa_dy = abs(dy/desloc_adm_y)
     if taxa_dy > 1:
-        cost = cost + taxa_dy*10**8
+        cost = cost + taxa_dy*10**10
 
     return cost
 
-if __name__ == "__main__":
-    print(trelica([1, 2, 3, 4, 5, 6, 7], True, False))
+# print(trelica([1, 2, 3, 4, 5, 6, 7], True, False))
