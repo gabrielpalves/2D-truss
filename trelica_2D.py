@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
 import random
-import time
-from datetime import timedelta
 
 from self_weight import self_weight
 from FEM import FEM
@@ -139,7 +137,6 @@ def trelica(secao_grupo, plotagem=False, salva_excel=False):
 
     ### Varia as propriedades, forças, etc
     for _ in range(n):
-        start = time.time()
         if var_Fx:
             fx = random.randint(-10**6, 10**6)  # em Newtons
             forcas[0][1] = fx
@@ -181,19 +178,6 @@ def trelica(secao_grupo, plotagem=False, salva_excel=False):
         # Guarda na tabela 'data'
         data.loc[len(data)] = np.concatenate((area_group, E_group, np.array([fx]), np.array([fy]), dx, dy,
                                             sigma_group))
-        
-        # Estima o tempo que vai demorar todas as 'n' iterações
-        end = time.time()
-        porcentagem = (_/n)*100
-        if porcentagem % 20 == 0:
-            duration = end - start
-            total_time = duration * n
-            elapsed_time = duration * _
-            remaining_time = total_time - elapsed_time
-            
-            print(f'Elapsed time (hh:mm:ss) {timedelta(seconds=elapsed_time)} --- '  
-                f'Reamining time (hh:mm:ss) {timedelta(seconds=remaining_time)} --- '
-                f'Total time (hh:mm:ss) {timedelta(seconds=total_time)}')
 
 
     """
