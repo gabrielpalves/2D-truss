@@ -1,26 +1,19 @@
 import numpy as np
-import pandas as pd
 import random
+import time
 
 from self_weight import self_weight
 from FEM import FEM
 from set_up_datatable import set_up_datatable
-from utils import group_results, vary_groups
+from utils import group_results, vary_groups, convert_time
 from plot_truss import plot_truss
 from save_truss_info import save_truss_info
 
-def trelica(secao_grupo, plotagem=False, salva_excel=False):
+def trelica(secao_grupo, plotagem=False, salva_excel=False, n=1, display_time=False, var_sec=False, var_mat=False, var_Fx=False, var_Fy=False):
 
     """
-    SET PARAMETERS
+    CONFIGURE STRUCTURE
     """
-    # Parâmetros
-    var_sec = False
-    var_mat = False
-    var_Fx = False
-    var_Fy = False
-    n = 1 # number of times to run
-
     # Montagem da estrutura
     # Nós
     x = np.array([0, 0, 1, 1, 2], dtype='float64')
@@ -99,8 +92,9 @@ def trelica(secao_grupo, plotagem=False, salva_excel=False):
         [13, 1],
     ], dtype='int32')
 
-    for idx, s in enumerate(secao_grupo):
-        prop_group[idx][0] = s
+    if len(secao_grupo) > 0:
+        for idx, s in enumerate(secao_grupo):
+            prop_group[idx][0] = s
 
     # Carregamentos [nó,   intensidade_x,  intensidade_y]
     forcas = np.array([
@@ -137,6 +131,7 @@ def trelica(secao_grupo, plotagem=False, salva_excel=False):
 
     ### Varia as propriedades, forças, etc
     for _ in range(n):
+        start = time.time()
         if var_Fx:
             fx = random.randint(-10**6, 10**6)  # em Newtons
             forcas[0][1] = fx
@@ -178,6 +173,21 @@ def trelica(secao_grupo, plotagem=False, salva_excel=False):
         # Guarda na tabela 'data'
         data.loc[len(data)] = np.concatenate((area_group, E_group, np.array([fx]), np.array([fy]), dx, dy,
                                             sigma_group))
+        
+        if display_time:
+            # Calculate reamining time
+            porcentagem = (_/n)*100
+            end = time.time()
+            if porcentagem % 20 == 0:
+                duration = end - start
+                total_time = duration * n
+                elapsed_time = duration * _
+                remaining_time = total_time - elapsed_time
+                
+                print(f'{porcentagem:3.0f}% completed:  ###  '
+                      f'Elapsed time {convert_time(elapsed_time)} -- '  
+                      f'Reamining time {convert_time(remaining_time)} -- '
+                      f'Predicted time {convert_time(total_time)}')
 
 
     """

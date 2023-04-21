@@ -51,13 +51,13 @@ def plot_truss(F, sigma, forcas, x, y, conec, desloc, scale, desloc_adm_x, deslo
     print('-----------------------------------------------------------')
     for el in range(n_el):
         print(
-            f'Elemento {i+1:2.0f} --> Força axial: {float(fn[i]):15.5f}; Tensão normal: {float(ten[i]):10.5f}')
+            f'Elemento {el+1:2.0f} --> Força axial: {float(fn[el]):15.5f}; Tensão normal: {float(ten[el]):10.5f}')
         m = prop_group[conec[el][1]-1][1]
-        fy_taxa = np.abs(ten[i])/(material[m-1][1]/gama_d)
+        fy_taxa = np.abs(ten[el])/(material[m-1][1]/gama_d)
         if fy_taxa > 1:
             falha = True
             print(
-                f'ELEMENTO {conec[i][0]} FALHOU. ULTRAPASSOU A TENSÃO DE ESCOAMENTO EM {(fy_taxa-1)*100:4.1f}%')
+                f'ELEMENTO {conec[el][0]} FALHOU. ULTRAPASSOU A TENSÃO DE ESCOAMENTO EM {(fy_taxa-1)*100:4.1f}%')
     print('===========================================================')
     print('\n')
 

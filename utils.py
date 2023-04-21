@@ -57,3 +57,14 @@ def group_results(Fs, group):
         group_array = np.array([np.max(np.abs(Fs))], dtype='float64')
     
     return group_array
+
+def convert_time(s):
+    """
+    Provided a time 's' in seconds,
+    this method converts to a string
+    in a format hh:mm:ss
+    """
+    hours, remainder = divmod(s, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    
+    return '{:02}:{:02}:{:02}'.format(int(hours), int(minutes), int(seconds))
